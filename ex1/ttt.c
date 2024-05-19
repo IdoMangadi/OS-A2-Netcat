@@ -4,7 +4,7 @@
 #include <ctype.h>
 
 /**
- * finction to check if some side won the game in a given board.
+ * function to check if some side won the game in a given board.
  * returns: 0 for no one, 1 for player 1 and 2 for player 2.
 */
 size_t hou_won_ttt(size_t board[3][3]){
@@ -79,19 +79,9 @@ int main(int argc, char *argv[]) {
 
             board[row][col] = 1;  // performig sai move
             printf("sai move: %zu\n", sai_curr_digit+1);
-
-            // board ptinting:
-            board_printing_ttt(board);
-
-            // victory check:
-            if(hou_won_ttt(board) == 1){  // means sai won
-                printf("I won! lunar deportation starting!\n");
-                return 0;
-            }
         }
 
         else{  // user turn:
-
             do{
                 // scaning user input:
                 // printf("Your choice: ");
@@ -105,13 +95,19 @@ int main(int argc, char *argv[]) {
             } while(user_input < '1' || user_input > '9' || board[row][col]);  // assuming the third condition will not be evaluated if the first two will return true.
             
             board[row][col] = 2;  // performig user move
-            board_printing_ttt(board);
+        }
 
-            // victory check:
-            if(hou_won_ttt(board) == 2){  // means user won
-                printf("I lost... lunar deportation will be executed in some advance version of me...\n");
-                return 0;
-            }
+        board_printing_ttt(board);
+
+        // victory check:
+        size_t winner = hou_won_ttt(board);
+        if(winner == 1){  // means sai won
+            printf("I won! lunar deportation starting!\n");
+            return 0;
+        }
+        if(winner == 2){  // means user won
+            printf("I lost... lunar deportation will be executed in some advance version of me...\n");
+            return 0;
         }
 
         // turns updating:
@@ -119,6 +115,6 @@ int main(int argc, char *argv[]) {
 
     }
 
-    printf("Draw");
+    printf("Draw\n");
     return 0;
 }
