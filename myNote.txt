@@ -1,0 +1,2 @@
+1. mynetcat.c: when operatring execv to execute ttt, hou closes the listening server_socket? 
+2.  
