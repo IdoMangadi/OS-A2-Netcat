@@ -35,6 +35,7 @@ void board_printing_ttt(size_t board[3][3]){
         printf("[%zu] [%zu] [%zu]\n", board[i][0], board[i][1], board[i][2]);
     }
     printf("\n");
+    fflush(stdout);
 }
 
 int main(int argc, char *argv[]) {
@@ -52,6 +53,7 @@ int main(int argc, char *argv[]) {
         // argument contain non-digit char || argument contain 0 || argument contain the same digit twice
         if (!isdigit(sai_input[i]) || sai_input[i] == '0' || ++digit_count[sai_input[i] - '0'] > 1) {
             fprintf(stderr, "Invalid argument!\n");
+            fflush(stderr);
             return 1;
         }
     }
@@ -82,7 +84,13 @@ int main(int argc, char *argv[]) {
         }
 
         else{  // user turn:
+        int first = 1;
             do{
+                 if(!first){
+                    fprintf(stdout, "NOT A VALID MOVE\n");
+                    board_printing_ttt(board);
+                    fflush(stdout);
+                }
                 // scaning user input:
                 // printf("Your choice: ");
                 if(scanf(" %c", &user_input) == -1){
@@ -91,10 +99,13 @@ int main(int argc, char *argv[]) {
                 }
                 row = (size_t)(user_input-'0'-1) / 3;
                 col = (size_t)(user_input-'0'-1) % 3;
+                first = 0;
+               
             // while(user input is not a digit || position in that place already taken):
             } while(user_input < '1' || user_input > '9' || board[row][col]);  // assuming the third condition will not be evaluated if the first two will return true.
             
             board[row][col] = 2;  // performig user move
+            fflush(stdout);
         }
 
         board_printing_ttt(board);
@@ -103,10 +114,12 @@ int main(int argc, char *argv[]) {
         size_t winner = hou_won_ttt(board);
         if(winner == 1){  // means sai won
             printf("I won! lunar deportation starting!\n");
+            fflush(stdout);
             return 0;
         }
         if(winner == 2){  // means user won
             printf("I lost... lunar deportation will be executed in some advance version of me...\n");
+            fflush(stdout);
             return 0;
         }
 
@@ -116,5 +129,6 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Draw\n");
+    fflush(stdout);
     return 0;
 }

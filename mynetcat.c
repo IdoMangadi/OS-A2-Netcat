@@ -129,8 +129,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Handle input & output redirections:
-    int input_fd = -1, output_fd = -1;
-    int tcp_server_fd = -1;  // to store the listening socket fd
+    int input_fd =STDIN_FILENO, output_fd = STDOUT_FILENO;
+    int tcp_server_fd = STDIN_FILENO;  // to store the listening socket fd
 
     if (input_mode != NULL) {  // means the user passed -i or -b 
 
@@ -142,6 +142,7 @@ int main(int argc, char *argv[]) {
         } else if (strncmp(input_mode, "TCPC", 4) == 0) {  // handling tcp client:
             char *hostname = strtok(input_mode + 4, ",");
             int port = atoi(strtok(NULL, ","));
+            printf("hostname: %s, port: %d\n", hostname, port);
             start_tcp_client(&input_fd, hostname, port); // means that the incomming messages from server will be throw input_fd.
         }
     }
@@ -163,7 +164,7 @@ int main(int argc, char *argv[]) {
     }
 
     // saving terminal input and keyboard output:
-    int original_input_fd = -1, original_output_fd = -1;
+    int original_input_fd = STDIN_FILENO, original_output_fd = STDOUT_FILENO;
     // Redirect input
     if (input_fd != -1) {  // means there was assignition of input strem
         original_input_fd = dup(STDIN_FILENO); 
@@ -214,20 +215,23 @@ int main(int argc, char *argv[]) {
         
         if(b_flag){  // regular tcp socket as a client
             while (1) {
-
+                 fflush(original_os);
                 // recveiving msg from server
                 memset(buffer, 0, BUFFER_SIZE);
                 fprintf(original_os, "input_fd: %d\n", input_fd);
+               
                 if(recv(input_fd, buffer, BUFFER_SIZE-1, 0) < 0){
                     fprintf(stderr,"recv error");
                     break;
                 }
                 fprintf(original_os, "%s\n", buffer);  // printing to the terminal
+                fflush(original_os);
 
                 // sending message to server:
                 memset(buffer, 0, BUFFER_SIZE);
-                fprintf(original_os, "Enter message to send (or 'exit' to quit):\n");
+                // fprintf(original_os, "Enter message to send (or 'exit' to quit):\n");
                 fgets(buffer, BUFFER_SIZE, original_is);  // taking input from client's keyboard
+                
 
                 // Remove newline character from buffer
                 buffer[strcspn(buffer, "\n")] = '\0';
