@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 2048
 
 /**
  * generating tcp socket, operates: socket, bind, listen and accept.
@@ -98,7 +98,6 @@ int main(int argc, char *argv[]) {
                 output_mode = optarg;
                 break;
             case 'b':
-                printf("-b received\n");
                 input_mode = optarg;
                 output_mode = optarg;
                 b_flag = 1;
@@ -137,7 +136,7 @@ int main(int argc, char *argv[]) {
 
         if (strncmp(input_mode, "TCPS", 4) == 0) {  // handling tcp server:
             int port = atoi(input_mode + 4);
-            start_tcp_server(&tcp_server_fd, &input_fd, port);  // input_fd will hold the socket returned from 'accept'.
+            start_tcp_server(&tcp_server_fd, &input_fd, port);  // input_fd will hold the socket returned from 'accept' (the client socket as the server side).
             printf("start tcp server returned\n");
         
         } else if (strncmp(input_mode, "TCPC", 4) == 0) {  // handling tcp client:
@@ -174,7 +173,7 @@ int main(int argc, char *argv[]) {
     // Redirect output
     if (output_fd != -1) {  // means there was assignition of output strem
         original_output_fd = dup(STDOUT_FILENO);
-        dup2(output_fd, STDOUT_FILENO);  // duplicate input_fd to be in stdout
+        dup2(output_fd, STDOUT_FILENO);  // duplicate output_fd to be in stdout
     }
 
     // creating access to original output strem:
@@ -218,7 +217,8 @@ int main(int argc, char *argv[]) {
 
                 // recveiving msg from server
                 memset(buffer, 0, BUFFER_SIZE);
-                if(recv(input_fd, buffer, BUFFER_SIZE, 0) < 0){
+                fprintf(original_os, "input_fd: %d\n", input_fd);
+                if(recv(input_fd, buffer, BUFFER_SIZE-1, 0) < 0){
                     fprintf(stderr,"recv error");
                     break;
                 }
