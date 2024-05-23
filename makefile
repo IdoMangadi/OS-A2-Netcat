@@ -12,7 +12,7 @@ mync: mynetcat.c ttt
 	gcc $(FLAGS) $< -o $@ 
 
 #run:
-run: mync
+run_e: mync
 	./mync -e "ttt $(s)"
 
 # Cleaning:
