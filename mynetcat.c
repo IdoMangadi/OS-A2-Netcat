@@ -77,6 +77,12 @@ void start_tcp_client(int *client_fd, char *hostname, int port) {
     }
 }
 
+void close_fds(int fds[], size_t size){
+    for(int i=0; i<size; i++){
+        if(fds[i] != 1) close(fds[i]);
+    }
+}
+
 int main(int argc, char *argv[]) {
 
     int opt;
@@ -129,14 +135,14 @@ int main(int argc, char *argv[]) {
     }
 
     // Handle input & output redirections:
-    int input_fd =STDIN_FILENO, output_fd = STDOUT_FILENO;
-    int tcp_server_fd = STDIN_FILENO;  // to store the listening socket fd
+    int input_fd = -1, output_fd = -1;
+    int tcp_server_in_fd = -1, tcp_server_out_fd = -1;  // to store the listening sockets fd
 
     if (input_mode != NULL) {  // means the user passed -i or -b 
 
         if (strncmp(input_mode, "TCPS", 4) == 0) {  // handling tcp server:
             int port = atoi(input_mode + 4);
-            start_tcp_server(&tcp_server_fd, &input_fd, port);  // input_fd will hold the socket returned from 'accept' (the client socket as the server side).
+            start_tcp_server(&tcp_server_in_fd, &input_fd, port);  // input_fd will hold the socket returned from 'accept' (the current client socket as the server side).
             printf("start tcp server returned\n");
         
         } else if (strncmp(input_mode, "TCPC", 4) == 0) {  // handling tcp client:
@@ -148,13 +154,12 @@ int main(int argc, char *argv[]) {
     }
     if(b_flag){  // means the user passed -b
         output_fd = input_fd;  // updating output_fd
-        // printf("**b_flag condition**\n");
     }
     else if (output_mode != NULL) {  // means the user passed -o
 
         if (strncmp(output_mode, "TCPS", 4) == 0) { // handling tcp server:
             int port = atoi(output_mode + 4);
-            start_tcp_server(&tcp_server_fd, &output_fd, port);  // output_fd will be the socket returned from 'accept'.
+            start_tcp_server(&tcp_server_out_fd, &output_fd, port);  // output_fd will be the socket returned from 'accept'.
 
         } else if (strncmp(output_mode, "TCPC", 4) == 0) {  // handling tcp client:
             char *hostname = strtok(output_mode + 4, ",");
@@ -198,61 +203,72 @@ int main(int argc, char *argv[]) {
 
     // handling running programm with -e:
     if(executable != NULL){
-        close(input_fd);  // no need for it anymore
-        close(output_fd);  // no need for it anymore
+
+        // closing unneeded fds:
+        if(input_fd != -1) close(input_fd);
+        if(output_fd != -1) close(output_fd);
+        if(tcp_server_in_fd!= -1) close(tcp_server_in_fd);
+        if(tcp_server_out_fd != -1) close(tcp_server_out_fd);
 
         // Execute the new program
-        fprintf(original_os, "running ttt with socket's io (input:%d (insted:%d), and output:%d(insted:%d))\n", dup(STDIN_FILENO),original_input_fd, dup(STDOUT_FILENO), original_output_fd);
-        close(tcp_server_fd);
         execv(executable_name, ttt_args);  // running the program with updated io streams
         perror("execv failed");
         return 1;
     }
     
-    if(strncmp(input_mode, "TCPC", 4) == 0){  // handling tcp client
+    // if(strncmp(input_mode, "TCPC", 4) == 0){  // handling tcp client
 
-        char buffer[BUFFER_SIZE];
-        
-        if(b_flag){  // regular tcp socket as a client
-            while (1) {
-                 fflush(original_os);
-                // recveiving msg from server
-                memset(buffer, 0, BUFFER_SIZE);
-                fprintf(original_os, "input_fd: %d\n", input_fd);
-               
-                if(recv(input_fd, buffer, BUFFER_SIZE-1, 0) < 0){
-                    fprintf(stderr,"recv error");
-                    break;
-                }
-                fprintf(original_os, "%s\n", buffer);  // printing to the terminal
-                fflush(original_os);
+    char buffer[BUFFER_SIZE];
+    
+    while (1) {
 
-                // sending message to server:
-                memset(buffer, 0, BUFFER_SIZE);
-                // fprintf(original_os, "Enter message to send (or 'exit' to quit):\n");
-                fgets(buffer, BUFFER_SIZE, original_is);  // taking input from client's keyboard
-                
-
-                // Remove newline character from buffer
-                buffer[strcspn(buffer, "\n")] = '\0';
-
-                // Check if the user wants to exit
-                if (strcmp(buffer, "exit") == 0) {
-                    break;
-                }
-
-                // Send message to server
-                if (send(output_fd, buffer, strlen(buffer), 0) < 0) {
-                    fprintf(stderr,"send failed");
-                    break;
-                }
+        fflush(original_os);
+        // recveiving msg:
+        memset(buffer, 0, BUFFER_SIZE);
+        if(input_mode != NULL){  // means it is a socket:
+            if(recv(input_fd, buffer, BUFFER_SIZE, 0) < 0){
+                fprintf(stderr,"recv error");
+                break;
             }
         }
+        else{  // means it is the standart stdin
+            if(fgets(buffer, BUFFER_SIZE, stdin) < 0){
+                fprintf(stderr,"fgets error");
+                break;
+            }
+        }
+        fprintf(original_os, "%s\n", buffer);  // printing msg to the terminal
+        fflush(original_os);
 
+        // communicate user:
+        memset(buffer, 0, BUFFER_SIZE);
+        fprintf(original_os, "Enter message to send (or 'exit' to quit):\n");
+        fgets(buffer, BUFFER_SIZE, original_is);  // taking input from client's keyboard
+        buffer[strcspn(buffer, "\n")] = '\0';  // Remove newline character from buffer
+        if (strcmp(buffer, "exit") == 0) {  // Check if the user wants to exit
+            break;
+        }
+
+        // Send message:
+        if(output_mode != NULL){  // means it is a socket:
+            if(send(output_fd, buffer, BUFFER_SIZE, 0) < 0){
+                fprintf(stderr,"send error");
+                break;
+            }
+        }
+        else{  // means it is the standart output
+            if (fputs(buffer, stdout) < 0) {
+                fprintf(stderr,"send failed");
+                break;
+            }
+        }
     }
 
-    close(input_fd);  // no need for it anymore
-    close(output_fd);  // no need for it anymore
+    // closing fds:
+    if(input_fd != -1) close(input_fd);
+    if(output_fd != -1) close(output_fd);
+    if(tcp_server_in_fd!= -1) close(tcp_server_in_fd);
+    if(tcp_server_out_fd != -1) close(tcp_server_out_fd);
 
     return 0;
 }
