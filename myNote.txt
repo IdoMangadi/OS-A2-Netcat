@@ -3,3 +3,5 @@
 3. change the names of input_fd and output_fd
 4. cover case of same port given as two arguments
 5. put all fds in array and close them with func
+6. mynetcat.c - while(1) - functions to send and recv according to state
+7. handle client closing when ending ttt
