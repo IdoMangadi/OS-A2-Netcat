@@ -1,7 +1,5 @@
 1. mynetcat.c: when operatring execv to execute ttt, hou closes the listening server_socket? 
-2. need to cover case of -i and -o of the same i/o stream ( b_flag will be down and program will reopen sockets for no need)
-3. change the names of input_fd and output_fd
 4. cover case of same port given as two arguments
 5. put all fds in array and close them with func
-6. mynetcat.c - while(1) - functions to send and recv according to state
-7. handle client closing when ending ttt
+6.To check unix domain socket options
+7.make gcov
