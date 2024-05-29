@@ -400,7 +400,7 @@ size_t generic_recv(int input_fd, char *input_mode, char *output_mode, char *buf
     size_t bytes_recv = 0;
     if (input_mode != NULL)
     {
-        if (timeout != -1 && (strncmp(input_mode, "UDP", 3) == 0 || strncmp(output_mode, "UDP", 3) == 0 || strncmp(input_mode, "UDSSD", 5) == 0 || strncmp(output_mode, "UDSSD", 5) == 0))
+        if (timeout != -1 && ((strncmp(input_mode, "UDP", 3) == 0 ||  strncmp(input_mode, "UDSSD", 5) == 0) || ((input_mode!=NULL)&&(strncmp(output_mode, "UDP", 3) == 0 || strncmp(output_mode, "UDSSD", 5) == 0))))
         {
             signal(SIGALRM, handle_alarm);
             alarm(timeout);
@@ -642,6 +642,8 @@ int main(int argc, char *argv[])
 
     int flag = 0;
     int isClient = 0;
+    int valid_timeout_input = ((input_mode != NULL) && ((strncmp(input_mode, "UDP", 3) == 0) || (strncmp(input_mode, "UDSSD", 5) == 0)));
+     int valid_timeout_output = ((output_mode != NULL) && ((strncmp(output_mode, "UDP", 3) == 0) || (strncmp(output_mode, "UDSCD", 5) == 0)));
     if ((input_mode != NULL && input_mode[3] == 'C') || (output_mode != NULL && output_mode[3] == 'C'))
         isClient = 1;
     while (1)
@@ -664,8 +666,6 @@ int main(int argc, char *argv[])
         // communicate user from original i/o:
         memset(buffer, 0, BUFFER_SIZE);
         fprintf(original_os, "Enter message to send (or 'exit' to quit):\n");
-        int valid_timeout_input = ((input_mode != NULL) && ((strncmp(input_mode, "UDP", 3) == 0) || (strncmp(input_mode, "UDSSD", 5) == 0)));
-        int valid_timeout_output = ((output_mode != NULL) && ((strncmp(output_mode, "UDP", 3) == 0) || (strncmp(output_mode, "UDSCD", 5) == 0)));
         if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
         { // if it is datagram, we need to set a timeout
             signal(SIGALRM, handle_alarm);

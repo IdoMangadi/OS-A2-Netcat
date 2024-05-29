@@ -1,3 +1,5 @@
 4. cover case of same port given as two arguments
-6.To check unix domain socket options - there is a sementation fault whent tryting to run  ./mync -i UDSSD/tmp/test -t 10   and ./mync -o UDSCD/tmp/test -t 3. check withgdb?
+5. There are some global variables now, might want to change it, but it requries passing the variables to basicly every function
+6.To check unix domain socket options - segmentation fault fixed, seems that everyting works. 
+6.5 - Im leaving you to recheck stuff when running the gcov tests. I think it's done.
 7.make gcov
