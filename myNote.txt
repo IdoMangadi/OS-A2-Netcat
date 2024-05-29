@@ -1,5 +1,3 @@
-1. mynetcat.c: when operatring execv to execute ttt, hou closes the listening server_socket? 
 4. cover case of same port given as two arguments
-5. put all fds in array and close them with func
-6.To check unix domain socket options
+6.To check unix domain socket options - there is a sementation fault whent tryting to run  ./mync -i UDSSD/tmp/test -t 10   and ./mync -o UDSCD/tmp/test -t 3. check withgdb?
 7.make gcov
