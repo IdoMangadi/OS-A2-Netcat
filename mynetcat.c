@@ -14,7 +14,19 @@
 #define BUFFER_SIZE 2048
 #define TO_SEC 4
 #define TO_MIC 0
+ int fds[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int fds_size = 0;
 
+
+void close_fds(int fds[], size_t size, int EXIT_CODE)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (fds[i] > -1)
+            close(fds[i]);
+    }
+    exit(EXIT_CODE);
+}
 /**
  * generating tcp socket, operates: socket, bind, listen and accept.
  * NOTE: blocking function. ends ready to receive data from connected client.
@@ -28,7 +40,7 @@ void start_tcp_server(int *server_fd, int *client_fd, int port)
     if (*server_fd < 0)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
     server_addr.sin_family = AF_INET;
@@ -38,20 +50,20 @@ void start_tcp_server(int *server_fd, int *client_fd, int port)
     if (bind(*server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("bind");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     printf("server is listening\n");
     if (listen(*server_fd, 1) < 0)
     {
         perror("listen");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
     *client_fd = accept(*server_fd, (struct sockaddr *)&client_addr, &client_len);
     if (*client_fd < 0)
     {
         perror("accept");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     printf("client accepted!\n");
 }
@@ -59,7 +71,7 @@ void start_tcp_server(int *server_fd, int *client_fd, int port)
 void handle_alarm(int sig)
 {
     fprintf(stderr, "timeout reached\n");
-    exit(EXIT_FAILURE);
+     close_fds(fds, fds_size, EXIT_FAILURE);
 }
 
 void start_udsc_datagram(int *client_fd, char *socket_path) // open Unix Domain Socket Client Datagram, and save the fd in client_fd
@@ -70,14 +82,14 @@ void start_udsc_datagram(int *client_fd, char *socket_path) // open Unix Domain 
     if (*client_fd < 0)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, socket_path);
     if (connect(*client_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("connect");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
 
@@ -89,26 +101,26 @@ void start_udss_datagram(int *server_fd, char *socket_path) // open Unix Domain 
     if (*server_fd < 0)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, socket_path);
     if (bind(*server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("bind");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     char buffer[BUFFER_SIZE];
     size_t bytes_recv = recv(*server_fd, buffer, BUFFER_SIZE, 0);
     if (bytes_recv < 0)
     {
         perror("recv");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     if (connect(*server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
     { // connecting to the client, so we can use send and recv instead of sendto and recvfrom
         perror("connect");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
 
@@ -120,14 +132,14 @@ void start_udsc_stream(int *client_fd, char *socket_path) // open Unix Domain So
     if (*client_fd < 0)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, socket_path);
     if (connect(*client_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("connect");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
 void start_udss_stream(int *server_fd, int *client_fd, char *socket_path) // open Unix Domain Socket Server Stream, and save the fd in server_fd
@@ -139,25 +151,25 @@ void start_udss_stream(int *server_fd, int *client_fd, char *socket_path) // ope
     if (*server_fd < 0)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, socket_path);
     if (bind(*server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("bind");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     if (listen(*server_fd, 1) < 0)
     {
         perror("listen");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     *client_fd = accept(*server_fd, (struct sockaddr *)&client_addr, &client_len);
     if (*client_fd < 0)
     {
         perror("accept");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     printf("client accepted!\n");
 }
@@ -175,14 +187,14 @@ void start_tcp_client(int *client_fd, char *hostname, int port)
     if (*client_fd < 0)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
     server = gethostbyname(hostname);
     if (server == NULL)
     {
         fprintf(stderr, "ERROR, no such host\n");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
     bzero((char *)&server_addr, sizeof(server_addr));
@@ -193,7 +205,7 @@ void start_tcp_client(int *client_fd, char *hostname, int port)
     if (connect(*client_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("connect");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
 
@@ -207,12 +219,14 @@ void start_udp_server(int *server_fd, int port)
     if (*server_fd < 0)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     int optval = 1;
     if (setsockopt(*server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1)
     {
         perror("setsockopt");
+        close_fds(fds, fds_size, EXIT_FAILURE);
+
     }
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
@@ -221,19 +235,19 @@ void start_udp_server(int *server_fd, int port)
     if (bind(*server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("bind");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     char buffer[BUFFER_SIZE];
     size_t bytes_recv = recvfrom(*server_fd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&client_addr, &client_len);
     if (bytes_recv < 0)
     {
         perror("recvfrom");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     if (connect(*server_fd, (struct sockaddr *)&client_addr, client_len) == -1)
     { // connecting to the client, so we can use send and recv instead of sendto and recvfrom
         perror("connect");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
 
@@ -246,14 +260,14 @@ void start_udp_client(int *client_fd, char *hostname, int port)
     if (*client_fd < 0)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
     server = gethostbyname(hostname);
     if (server == NULL)
     {
         fprintf(stderr, "ERROR, no such host\n");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
     bzero((char *)&server_addr, sizeof(server_addr));
@@ -265,12 +279,12 @@ void start_udp_client(int *client_fd, char *hostname, int port)
     if (sendto(*client_fd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("sendto");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
     if (connect(*client_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("connect");
-        exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
 
@@ -316,7 +330,7 @@ void handle_i_args(char *input_mode, int *input_fd, int *tcp_server_in_fd)
     else
     {
         printf("Not a valid argument for input mode\n");
-        exit(1);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
 void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
@@ -362,7 +376,7 @@ void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
     else
     {
         printf("Not a valid argument for output mode\n");
-        exit(1);
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
 
@@ -384,12 +398,12 @@ size_t generic_recv(int input_fd, char *input_mode,char* output_mode, char *buff
             if (bytes_recv == 0)
             {
                 fprintf(stderr, "Connection closed\n");
-                exit(1);
+        close_fds(fds, fds_size, EXIT_FAILURE);
             }
             else
             {
                 perror("recv");
-                exit(1);
+        close_fds(fds, fds_size, EXIT_FAILURE);
             }
         }
     }
@@ -399,7 +413,7 @@ size_t generic_recv(int input_fd, char *input_mode,char* output_mode, char *buff
         if (fgets(buffer, BUFFER_SIZE, stdin) == NULL)
         {
             fprintf(stderr, "fgets error");
-            return 1;
+           close_fds(fds, fds_size, EXIT_FAILURE);
         }
     }
     return bytes_recv;
@@ -414,7 +428,7 @@ size_t generic_send(int output_fd, char *output_mode, char *buffer, size_t bytes
         if (bytes_sent < 0)
         {
             fprintf(stderr, "send error");
-            return 1;
+        close_fds(fds, fds_size, EXIT_FAILURE);
         }
         return bytes_sent;
     }
@@ -424,20 +438,13 @@ size_t generic_send(int output_fd, char *output_mode, char *buffer, size_t bytes
         if ((bytes_sent = fputs(buffer, stdout)) < 0)
         {
             fprintf(stderr, "fputs error");
-            return 1;
+        close_fds(fds, fds_size, EXIT_FAILURE);
         }
     }
     return bytes_sent;
 }
 
-void close_fds(int fds[], size_t size)
-{
-    for (int i = 0; i < size; i++)
-    {
-        if (fds[i] != 1)
-            close(fds[i]);
-    }
-}
+
  
 int main(int argc, char *argv[])
 {
@@ -449,7 +456,7 @@ int main(int argc, char *argv[])
     char *timeout = NULL;
     int b_flag = 0;
     int io_flag = 0;
-
+   
     // Parse command line options
     while ((opt = getopt(argc, argv, "e:i:o:b:t:")) != -1)
     {
@@ -476,7 +483,7 @@ int main(int argc, char *argv[])
             break;
         default:
             fprintf(stderr, "Usage: %s -e \"executable arguments\" [-i input_mode] [-o output_mode] [-b both_mode]\n", argv[0]);
-            return 1;
+        close_fds(fds, fds_size, EXIT_FAILURE);
         }
     }
 
@@ -486,18 +493,25 @@ int main(int argc, char *argv[])
     if (b_flag && io_flag)
     {
         fprintf(stderr, "Usage: %s -e \"executable arguments\" [-i input_mode] [-o output_mode] [-b both_mode]\n", argv[0]);
-        return 1;
+        close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
     // Handle input & output redirections:
     int input_fd = -1, output_fd = -1;
     int tcp_server_in_fd = -1, tcp_server_out_fd = -1; // to store the listening sockets fd
+    
+        fds[fds_size++] = input_fd;
+        fds[fds_size++] = output_fd;
+        fds[fds_size++] = tcp_server_in_fd;
+        fds[fds_size++] = tcp_server_out_fd;
+        
+
     if((input_mode!=NULL&&strncmp(input_mode,"TCP",3)==0) || (output_mode!=NULL&&strncmp(output_mode,"TCP",3)==0))
     {
         if(timeout!=NULL)
         {
             fprintf(stderr,"Timeout is not available for TCP\n");
-            return 1;
+        close_fds(fds, fds_size, EXIT_FAILURE);
         }
     }
 
@@ -516,6 +530,8 @@ int main(int argc, char *argv[])
 
     // saving terminal input and keyboard output:
     int original_input_fd = STDIN_FILENO, original_output_fd = STDOUT_FILENO;
+    fds[fds_size++] = original_input_fd;
+        fds[fds_size++] = original_output_fd;
     // Redirect input
 
     if (executable != NULL)
@@ -528,7 +544,7 @@ int main(int argc, char *argv[])
         if (executable_name == NULL || executable_arg == NULL)
         {
             fprintf(stderr, "Invalid format for -e option. Expected format: \"executable arguments\"\n");
-            exit(EXIT_FAILURE);
+        close_fds(fds, fds_size, EXIT_FAILURE);
         }
 
         // Prepare arguments for execv
@@ -542,10 +558,9 @@ int main(int argc, char *argv[])
             if (dup2(input_fd, STDIN_FILENO) == -1)
             {
                 fprintf(stderr, "dup2 failed");
-                close(original_input_fd);
-                close(output_fd);
-                close(input_fd);
-                return 1;
+                        close_fds(fds, fds_size, EXIT_FAILURE);
+
+                
             } // duplicate input_fd to be in stdin
         }
 
@@ -556,29 +571,35 @@ int main(int argc, char *argv[])
             if (dup2(output_fd, STDOUT_FILENO) == -1)
             {
                 fprintf(stderr, "dup2 failed");
-                close(original_output_fd);
-                close(output_fd);
-                close(input_fd);
-                return 1;
+                close_fds(fds, fds_size, EXIT_FAILURE);
+
             } // duplicate output_fd to be in stdout
         }
         
-    
+     
 
         // closing unneeded fds:
-        if (input_fd != -1)
+        if (input_fd != -1){
             close(input_fd);
-        if (output_fd != -1)
+            fds[0]=-1;
+        }
+        if (output_fd != -1){
             close(output_fd);
-        if (tcp_server_in_fd != -1)
+            fds[1]=-1;
+        }
+        if (tcp_server_in_fd != -1){
             close(tcp_server_in_fd);
-        if (tcp_server_out_fd != -1)
+            fds[2]=-1;}
+
+        if (tcp_server_out_fd != -1){
             close(tcp_server_out_fd);
+            fds[3]=-1;
+        }
 
         // Execute the new program
         execv(executable_name, ttt_args); // running the program with updated io streams
         perror("execv failed");
-        return 1;
+        close_fds(fds, fds_size, EXIT_FAILURE);
     
     }
 
@@ -587,20 +608,16 @@ int main(int argc, char *argv[])
     if (original_os == NULL)
     {
         fprintf(stderr, "fdopen failed");
-        close(original_output_fd);
-        close(output_fd);
-        close(input_fd);
-        return 1;
+                close_fds(fds, fds_size, EXIT_FAILURE);
+
     }
     // creating access to original input strem:
     FILE *original_is = fdopen(original_input_fd, "r");
     if (original_is == NULL)
     {
         fprintf(stderr, "fdopen failed");
-        close(original_input_fd);
-        close(output_fd);
-        close(input_fd);
-        return 1;
+               close_fds(fds, fds_size, EXIT_FAILURE);
+
     }
 
     signal(SIGALRM, handle_alarm);
@@ -647,7 +664,7 @@ int main(int argc, char *argv[])
         buffer[strcspn(buffer, "\n")] = '\0';    // Remove newline character from buffer
         if (strcmp(buffer, "exit") == 0)
         { // Check if the user wants to exit
-            break;
+        close_fds(fds, fds_size, EXIT_SUCCESS);
         }
 
         // Send message:
@@ -655,14 +672,8 @@ int main(int argc, char *argv[])
     }
 
     // closing fds:
-    if (input_fd != -1)
-        close(input_fd);
-    if (output_fd != -1)
-        close(output_fd);
-    if (tcp_server_in_fd != -1)
-        close(tcp_server_in_fd);
-    if (tcp_server_out_fd != -1)
-        close(tcp_server_out_fd);
+            close_fds(fds, fds_size, EXIT_SUCCESS);
+
 
     return 0;
 }
