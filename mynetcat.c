@@ -62,7 +62,7 @@ void handle_alarm(int sig)
     exit(EXIT_FAILURE);
 }
 
-void start_udsc_datagram(int *client_fd, char *socket_path)//open Unix Domain Socket Client Datagram, and save the fd in client_fd
+void start_udsc_datagram(int *client_fd, char *socket_path) // open Unix Domain Socket Client Datagram, and save the fd in client_fd
 {
     struct sockaddr_un server_addr;
     printf("starting unix domain socket client\n");
@@ -81,7 +81,7 @@ void start_udsc_datagram(int *client_fd, char *socket_path)//open Unix Domain So
     }
 }
 
-void start_udss_datagram(int *server_fd, char *socket_path)//open Unix Domain Socket Server Datagram, and save the fd in server_fd
+void start_udss_datagram(int *server_fd, char *socket_path) // open Unix Domain Socket Server Datagram, and save the fd in server_fd
 {
     struct sockaddr_un server_addr;
     printf("starting unix domain socket server\n");
@@ -112,7 +112,7 @@ void start_udss_datagram(int *server_fd, char *socket_path)//open Unix Domain So
     }
 }
 
-void start_udsc_stream(int *client_fd, char *socket_path) //open Unix Domain Socket Client Stream, and save the fd in client_fd
+void start_udsc_stream(int *client_fd, char *socket_path) // open Unix Domain Socket Client Stream, and save the fd in client_fd
 {
     struct sockaddr_un server_addr;
     printf("starting unix domain socket client\n");
@@ -130,7 +130,7 @@ void start_udsc_stream(int *client_fd, char *socket_path) //open Unix Domain Soc
         exit(EXIT_FAILURE);
     }
 }
-void start_udss_stream(int *server_fd, int *client_fd, char *socket_path) //open Unix Domain Socket Server Stream, and save the fd in server_fd
+void start_udss_stream(int *server_fd, int *client_fd, char *socket_path) // open Unix Domain Socket Server Stream, and save the fd in server_fd
 {
     struct sockaddr_un server_addr, client_addr;
     socklen_t client_len = sizeof(client_addr);
@@ -307,17 +307,17 @@ void handle_i_args(char *input_mode, int *input_fd, int *tcp_server_in_fd)
         printf("socket path: %s\n", socket_path);
         start_udsc_stream(input_fd, socket_path);
     }
-    else if(strncmp(input_mode, "UDSSS",5)==0)
+    else if (strncmp(input_mode, "UDSSS", 5) == 0)
     {
         char *socket_path = input_mode + 5;
         printf("socket path: %s\n", socket_path);
         start_udss_stream(tcp_server_in_fd, input_fd, socket_path);
     }
-    else{
+    else
+    {
         printf("Not a valid argument for input mode\n");
         exit(1);
     }
-   
 }
 void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
 {
@@ -341,36 +341,37 @@ void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
         printf("hostname: %s, port: %d\n", hostname, port);
         start_udp_client(output_fd, hostname, port); // means that the incomming messages from server will be throw output_fd.
     }
-    else if(strncmp(output_mode, "UDSCD", 5) == 0)
+    else if (strncmp(output_mode, "UDSCD", 5) == 0)
     { // handling Unix Domain Socket client over datagram
         char *socket_path = output_mode + 5;
         printf("socket path: %s\n", socket_path);
         start_udsc_datagram(output_fd, socket_path);
     }
-    else if(strncmp(output_mode, "UDSSS", 5) == 0)
+    else if (strncmp(output_mode, "UDSSS", 5) == 0)
     { // handling Unix Domain Socket client over datagram
         char *socket_path = output_mode + 5;
         printf("socket path: %s\n", socket_path);
-        start_udss_stream(tcp_server_out_fd,output_fd, socket_path);
+        start_udss_stream(tcp_server_out_fd, output_fd, socket_path);
     }
-    else if(strncmp(output_mode, "UDSCS", 5) == 0)
+    else if (strncmp(output_mode, "UDSCS", 5) == 0)
     { // handling Unix Domain Socket client over stream
         char *socket_path = output_mode + 5;
         printf("socket path: %s\n", socket_path);
         start_udsc_stream(output_fd, socket_path);
     }
-    else{
+    else
+    {
         printf("Not a valid argument for output mode\n");
         exit(1);
     }
 }
 
-size_t generic_recv(int input_fd, char *input_mode, char *buffer, size_t buffer_size, int timeout)
+size_t generic_recv(int input_fd, char *input_mode,char* output_mode, char *buffer, size_t buffer_size, int timeout)
 { // uses recv or recvfrom based on the input_mode, recv for TCP and recvfrom for UDP
     size_t bytes_recv = 0;
     if (input_mode != NULL)
     {
-        if (timeout != -1 && (strncmp(input_mode, "UDP", 3) == 0))
+        if (timeout != -1 && (strncmp(input_mode, "UDP", 3) == 0 || strncmp(output_mode, "UDP", 3) == 0))
         {
             signal(SIGALRM, handle_alarm);
             alarm(timeout);
@@ -380,8 +381,16 @@ size_t generic_recv(int input_fd, char *input_mode, char *buffer, size_t buffer_
 
         if (bytes_recv <= 0)
         {
-            fprintf(stderr, "recv error");
-            exit(1);
+            if (bytes_recv == 0)
+            {
+                fprintf(stderr, "Connection closed\n");
+                exit(1);
+            }
+            else
+            {
+                perror("recv");
+                exit(1);
+            }
         }
     }
 
@@ -429,13 +438,13 @@ void close_fds(int fds[], size_t size)
             close(fds[i]);
     }
 }
-
+ 
 int main(int argc, char *argv[])
 {
-
+ 
     int opt;
     char *executable = NULL;
-    char *input_mode = NULL;
+   char *input_mode = NULL;
     char *output_mode = NULL;
     char *timeout = NULL;
     int b_flag = 0;
@@ -480,28 +489,17 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (executable != NULL)
-    { // means the user provide -e argument
-
-        // Separate executable and arguments
-        executable_name = strtok(executable, " "); // first call
-        executable_arg = strtok(NULL, " ");        // second call
-
-        if (executable_name == NULL || executable_arg == NULL)
-        {
-            fprintf(stderr, "Invalid format for -e option. Expected format: \"executable arguments\"\n");
-            exit(EXIT_FAILURE);
-        }
-
-        // Prepare arguments for execv
-        ttt_args[0] = executable_name;
-        ttt_args[1] = executable_arg;
-        ttt_args[2] = NULL;
-    }
-
     // Handle input & output redirections:
     int input_fd = -1, output_fd = -1;
     int tcp_server_in_fd = -1, tcp_server_out_fd = -1; // to store the listening sockets fd
+    if((input_mode!=NULL&&strncmp(input_mode,"TCP",3)==0) || (output_mode!=NULL&&strncmp(output_mode,"TCP",3)==0))
+    {
+        if(timeout!=NULL)
+        {
+            fprintf(stderr,"Timeout is not available for TCP\n");
+            return 1;
+        }
+    }
 
     if (input_mode != NULL)
     { // means the user passed -i or -b
@@ -519,31 +517,69 @@ int main(int argc, char *argv[])
     // saving terminal input and keyboard output:
     int original_input_fd = STDIN_FILENO, original_output_fd = STDOUT_FILENO;
     // Redirect input
-    if (input_fd != -1)
-    { // means there was assignition of input strem
-        original_input_fd = dup(STDIN_FILENO);
-        if (dup2(input_fd, STDIN_FILENO) == -1)
-        {
-            fprintf(stderr, "dup2 failed");
-            close(original_input_fd);
-            close(output_fd);
-            close(input_fd);
-            return 1;
-        } // duplicate input_fd to be in stdin
-    }
 
-    // Redirect output
-    if (output_fd != -1)
-    { // means there was assignition of output strem
-        original_output_fd = dup(STDOUT_FILENO);
-        if (dup2(output_fd, STDOUT_FILENO) == -1)
+    if (executable != NULL)
+    { // means the user provide -e argument
+
+        // Separate executable and arguments
+        executable_name = strtok(executable, " "); // first call
+        executable_arg = strtok(NULL, " ");        // second call
+
+        if (executable_name == NULL || executable_arg == NULL)
         {
-            fprintf(stderr, "dup2 failed");
-            close(original_output_fd);
-            close(output_fd);
+            fprintf(stderr, "Invalid format for -e option. Expected format: \"executable arguments\"\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // Prepare arguments for execv
+        ttt_args[0] = executable_name;
+        ttt_args[1] = executable_arg;
+        ttt_args[2] = NULL;
+
+        if (input_fd != -1)
+        { // means there was assignition of input strem
+            original_input_fd = dup(STDIN_FILENO);
+            if (dup2(input_fd, STDIN_FILENO) == -1)
+            {
+                fprintf(stderr, "dup2 failed");
+                close(original_input_fd);
+                close(output_fd);
+                close(input_fd);
+                return 1;
+            } // duplicate input_fd to be in stdin
+        }
+
+        // Redirect output
+        if (output_fd != -1)
+        { // means there was assignition of output strem
+            original_output_fd = dup(STDOUT_FILENO);
+            if (dup2(output_fd, STDOUT_FILENO) == -1)
+            {
+                fprintf(stderr, "dup2 failed");
+                close(original_output_fd);
+                close(output_fd);
+                close(input_fd);
+                return 1;
+            } // duplicate output_fd to be in stdout
+        }
+        
+    
+
+        // closing unneeded fds:
+        if (input_fd != -1)
             close(input_fd);
-            return 1;
-        } // duplicate output_fd to be in stdout
+        if (output_fd != -1)
+            close(output_fd);
+        if (tcp_server_in_fd != -1)
+            close(tcp_server_in_fd);
+        if (tcp_server_out_fd != -1)
+            close(tcp_server_out_fd);
+
+        // Execute the new program
+        execv(executable_name, ttt_args); // running the program with updated io streams
+        perror("execv failed");
+        return 1;
+    
     }
 
     // creating access to original output strem:
@@ -568,25 +604,7 @@ int main(int argc, char *argv[])
     }
 
     signal(SIGALRM, handle_alarm);
-    // handling running programm with -e:
-    if (executable != NULL)
-    {
-
-        // closing unneeded fds:
-        if (input_fd != -1)
-            close(input_fd);
-        if (output_fd != -1)
-            close(output_fd);
-        if (tcp_server_in_fd != -1)
-            close(tcp_server_in_fd);
-        if (tcp_server_out_fd != -1)
-            close(tcp_server_out_fd);
-
-        // Execute the new program
-        execv(executable_name, ttt_args); // running the program with updated io streams
-        perror("execv failed");
-        return 1;
-    }
+   
 
     char buffer[BUFFER_SIZE];
     int timeout_int = -1;
@@ -608,7 +626,7 @@ int main(int argc, char *argv[])
             fflush(original_os);
             // recveiving msg:
             memset(buffer, 0, BUFFER_SIZE);
-            bytes_recv = generic_recv(input_fd, input_mode, buffer, BUFFER_SIZE, timeout_int);
+            bytes_recv = generic_recv(input_fd, input_mode,output_mode, buffer, BUFFER_SIZE, timeout_int);
             if (input_mode != NULL && bytes_recv > 0)
             {                                         // means there was a message
                 fprintf(original_os, "%s\n", buffer); // printing msg to the terminal
@@ -619,7 +637,13 @@ int main(int argc, char *argv[])
         // communicate user from original i/o:
         memset(buffer, 0, BUFFER_SIZE);
         fprintf(original_os, "Enter message to send (or 'exit' to quit):\n");
+        if (timeout_int != -1 && ((input_mode!=NULL&&strncmp(input_mode, "UDP", 3) == 0) ||(output_mode!=NULL&&strncmp(output_mode, "UDP", 3) == 0)))
+        {
+            signal(SIGALRM, handle_alarm);
+            alarm(timeout_int);
+        }
         fgets(buffer, BUFFER_SIZE, original_is); // taking input from client's keyboard
+        alarm(0);
         buffer[strcspn(buffer, "\n")] = '\0';    // Remove newline character from buffer
         if (strcmp(buffer, "exit") == 0)
         { // Check if the user wants to exit
