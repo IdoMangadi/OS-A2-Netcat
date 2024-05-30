@@ -11,13 +11,17 @@
 #include <signal.h>
 #include <sys/un.h>
 
-#define BUFFER_SIZE 2048
-#define TO_SEC 4
-#define TO_MIC 0
-int fds[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
-int fds_size = 0;
-char unix_path[100];
+#define BUFFER_SIZE 2048  // buffer size for the messages
+#define TO_SEC 4  // timeout in seconds
+#define TO_MIC 0 // timeout in microseconds
 
+int fds[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};  // array to hold the fds 
+int fds_size = 0;  // size of the fds array
+char unix_path[100];  // path for the unix domain socket
+
+/**
+ * closing all the fds in the fds array, and unlink the unix domain socket if it was created.
+*/
 void close_fds(int fds[], size_t size, int EXIT_CODE)
 {
     for (int i = 0; i < size; i++)
@@ -31,12 +35,14 @@ void close_fds(int fds[], size_t size, int EXIT_CODE)
     }
     exit(EXIT_CODE);
 }
+
 /**
  * generating tcp socket, operates: socket, bind, listen and accept.
  * NOTE: blocking function. ends ready to receive data from connected client.
  */
 void start_tcp_server(int *server_fd, int *client_fd, int port)
 {
+    // creating the socket
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len = sizeof(client_addr);
     printf("starting tcp server\n");
@@ -46,7 +52,6 @@ void start_tcp_server(int *server_fd, int *client_fd, int port)
         perror("socket");
         close_fds(fds, fds_size, EXIT_FAILURE);
     }
-
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(port);
@@ -72,12 +77,18 @@ void start_tcp_server(int *server_fd, int *client_fd, int port)
     printf("client accepted!\n");
 }
 
+/**
+ * handling the alarm signal, and printing a message.
+*/
 void handle_alarm(int sig)
 {
     fprintf(stderr, "timeout reached\n");
     close_fds(fds, fds_size, EXIT_FAILURE);
 }
 
+/**
+ * generating Unix Domain Socket Client Stream, operates: socket, connect.
+*/
 void start_udsc_datagram(int *client_fd, char *socket_path) // open Unix Domain Socket Client Datagram, and save the fd in client_fd
 {
     struct sockaddr_un server_addr;
@@ -98,6 +109,9 @@ void start_udsc_datagram(int *client_fd, char *socket_path) // open Unix Domain 
     printf("connected to the server\n");
 }
 
+/**
+ * generating Unix Domain Socket Server Datagram, operates: socket, bind, connect.
+*/
 void start_udss_datagram(int *server_fd, char *socket_path) // open Unix Domain Socket Server Datagram, and save the fd in server_fd
 {
     struct sockaddr_un server_addr;
@@ -113,7 +127,7 @@ void start_udss_datagram(int *server_fd, char *socket_path) // open Unix Domain 
         close_fds(fds, fds_size, EXIT_FAILURE);
     }
     server_addr.sun_family = AF_UNIX;
-    unlink(socket_path);
+    unlink(socket_path);  // unlink the socket path
 
     strcpy(server_addr.sun_path, socket_path);
     if (bind(*server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
@@ -128,6 +142,9 @@ void start_udss_datagram(int *server_fd, char *socket_path) // open Unix Domain 
     }
 }
 
+/**
+ * generating Unix Domain Socket Client Stream, operates: socket, connect.
+*/
 void start_udsc_stream(int *client_fd, char *socket_path) // open Unix Domain Socket Client Stream, and save the fd in client_fd
 {
     struct sockaddr_un server_addr;
@@ -146,6 +163,11 @@ void start_udsc_stream(int *client_fd, char *socket_path) // open Unix Domain So
         close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
+
+/**
+ * generating Unix Domain Socket Server Stream, operates: socket, bind, listen, accept.
+ * NOTE: blocking function. ends ready to receive data from connected client.
+*/
 void start_udss_stream(int *server_fd, int *client_fd, char *socket_path) // open Unix Domain Socket Server Stream, and save the fd in server_fd
 {
     struct sockaddr_un server_addr, client_addr;
@@ -214,6 +236,9 @@ void start_tcp_client(int *client_fd, char *hostname, int port)
     }
 }
 
+/**
+ * generating udp server.
+*/
 void start_udp_server(int *server_fd, int port)
 {
 
@@ -255,6 +280,10 @@ void start_udp_server(int *server_fd, int port)
     }
 }
 
+/**
+ * generating udp client.
+ * NOTE: ends with connected client ready to send data.
+*/
 void start_udp_client(int *client_fd, char *hostname, int port)
 {
     struct sockaddr_in server_addr;
@@ -292,6 +321,9 @@ void start_udp_client(int *client_fd, char *hostname, int port)
     }
 }
 
+/**
+ * handling the input arguments, and starting the appropriate server/client.
+*/
 void handle_i_args(char *input_mode, int *input_fd, int *tcp_server_in_fd)
 {
     if (strncmp(input_mode, "TCPS", 4) == 0)
@@ -343,13 +375,17 @@ void handle_i_args(char *input_mode, int *input_fd, int *tcp_server_in_fd)
         close_fds(fds, fds_size, EXIT_FAILURE);
     }
 }
+
+/**
+ * handling the output arguments, and starting the appropriate server/client.
+*/
 void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
 {
     if (strncmp(output_mode, "TCPS", 4) == 0)
     { // handling tcp server:
         int port = atoi(output_mode + 4);
         start_tcp_server(tcp_server_out_fd, output_fd, port); // output_fd will hold the socket returned from 'accept' (the current client socket as the server side).
-        printf("start tcp server returned\n");
+        // printf("start tcp server returned\n");
     }
     else if (strncmp(output_mode, "TCPC", 4) == 0)
     { // handling tcp client:
@@ -376,7 +412,6 @@ void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
     { // handling Unix Domain Socket client over datagram
         char *socket_path = output_mode + 5;
         strcpy(unix_path, socket_path);
-
         printf("socket path: %s\n", socket_path);
         start_udss_stream(tcp_server_out_fd, output_fd, socket_path);
     }
@@ -384,7 +419,6 @@ void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
     { // handling Unix Domain Socket client over stream
         char *socket_path = output_mode + 5;
         strcpy(unix_path, socket_path);
-
         printf("socket path: %s\n", socket_path);
         start_udsc_stream(output_fd, socket_path);
     }
@@ -395,8 +429,11 @@ void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
     }
 }
 
+/**
+ * generic recv function, handles the input from the user or from the input stream.
+*/
 size_t generic_recv(int input_fd, char *input_mode, char *output_mode, char *buffer, size_t buffer_size, int timeout)
-{ // uses recv or recvfrom based on the input_mode, recv for TCP and recvfrom for UDP
+{
     size_t bytes_recv = 0;
     if (input_mode != NULL)
     {
@@ -434,6 +471,9 @@ size_t generic_recv(int input_fd, char *input_mode, char *output_mode, char *buf
     return bytes_recv;
 }
 
+/**
+ * generic send function, handles the output to the user or to the output stream.
+*/
 size_t generic_send(int output_fd, char *output_mode, char *buffer, size_t bytes_to_send)
 {
     size_t bytes_sent = 0;
@@ -449,26 +489,30 @@ size_t generic_send(int output_fd, char *output_mode, char *buffer, size_t bytes
     }
 
     else
-    { // means it is the standart stdout
-        if ((bytes_sent = fputs(buffer, stdout)) < 0)
+    { // means it is the stdout
+        if ((bytes_sent = printf("%s\n",buffer)) < 0)
         {
             fprintf(stderr, "fputs error");
             close_fds(fds, fds_size, EXIT_FAILURE);
         }
+        fflush(stdout);
     }
     return bytes_sent;
 }
 
+/**
+ * main function, handling the command line arguments, and the communication between the user and the server/client.
+*/
 int main(int argc, char *argv[])
 {
 
     int opt;
-    char *executable = NULL;
-    char *input_mode = NULL;
-    char *output_mode = NULL;
-    char *timeout = NULL;
-    int b_flag = 0;
-    int io_flag = 0;
+    char *executable = NULL;  // the executable to run
+    char *input_mode = NULL;  // the input mode
+    char *output_mode = NULL;  // the output mode
+    char *timeout = NULL;  // the timeout
+    int b_flag = 0;  // flag to check if the both mode was used
+    int io_flag = 0;  // flag to check if the input/output mode was used
 
     // Parse command line options
     while ((opt = getopt(argc, argv, "e:i:o:b:t:")) != -1)
@@ -501,23 +545,25 @@ int main(int argc, char *argv[])
     }
 
     char *executable_name, *executable_arg;
-    char *ttt_args[3];
+    char *ttt_args[3];  // array to hold the arguments for the execv
 
-    if (b_flag && io_flag)
+    if (b_flag && io_flag)  // if the both mode was used with the input/output mode
     {
         fprintf(stderr, "Usage: %s -e \"executable arguments\" [-i input_mode] [-o output_mode] [-b both_mode]\n", argv[0]);
         close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
     // Handle input & output redirections:
-    int input_fd = -1, output_fd = -1;
+    int input_fd = -1, output_fd = -1;  // to store the input/output fds
     int tcp_server_in_fd = -1, tcp_server_out_fd = -1; // to store the listening sockets fd
 
+    // saving the fds in the fds array:
     fds[fds_size++] = input_fd;
     fds[fds_size++] = output_fd;
     fds[fds_size++] = tcp_server_in_fd;
     fds[fds_size++] = tcp_server_out_fd;
 
+    // Check if the user provided a timeout for TCP:
     if ((input_mode != NULL && strncmp(input_mode, "TCP", 3) == 0) || (output_mode != NULL && strncmp(output_mode, "TCP", 3) == 0))
     {
         if (timeout != NULL)
@@ -532,7 +578,7 @@ int main(int argc, char *argv[])
         handle_i_args(input_mode, &input_fd, &tcp_server_in_fd);
     }
     if (b_flag)
-    {                         // means the user passed -b
+    { // means the user passed -b
         output_fd = input_fd; // updating output_fd
     }
     else if (output_mode != NULL)
@@ -540,15 +586,9 @@ int main(int argc, char *argv[])
         handle_o_args(output_mode, &output_fd, &tcp_server_out_fd);
     }
 
-    // saving terminal input and keyboard output:
-    int original_input_fd = STDIN_FILENO, original_output_fd = STDOUT_FILENO;
-    fds[fds_size++] = original_input_fd;
-    fds[fds_size++] = original_output_fd;
-    // Redirect input
-
+    // handling the executable:
     if (executable != NULL)
-    { // means the user provide -e argument
-
+    {
         // Separate executable and arguments
         executable_name = strtok(executable, " "); // first call
         executable_arg = strtok(NULL, " ");        // second call
@@ -564,9 +604,10 @@ int main(int argc, char *argv[])
         ttt_args[1] = executable_arg;
         ttt_args[2] = NULL;
 
+        // redirecting the input/output streams to the executable:
         if (input_fd != -1)
         { // means there was assignition of input strem
-            original_input_fd = dup(STDIN_FILENO);
+            // original_input_fd = dup(STDIN_FILENO);
             if (dup2(input_fd, STDIN_FILENO) == -1)
             {
                 fprintf(stderr, "dup2 failed");
@@ -574,11 +615,9 @@ int main(int argc, char *argv[])
 
             } // duplicate input_fd to be in stdin
         }
-
-        // Redirect output
         if (output_fd != -1)
         { // means there was assignition of output strem
-            original_output_fd = dup(STDOUT_FILENO);
+            // original_output_fd = dup(STDOUT_FILENO);
             if (dup2(output_fd, STDOUT_FILENO) == -1)
             {
                 fprintf(stderr, "dup2 failed");
@@ -603,7 +642,6 @@ int main(int argc, char *argv[])
             close(tcp_server_in_fd);
             fds[2] = -1;
         }
-
         if (tcp_server_out_fd != -1)
         {
             close(tcp_server_out_fd);
@@ -616,63 +654,57 @@ int main(int argc, char *argv[])
         close_fds(fds, fds_size, EXIT_FAILURE);
     }
 
-    // creating access to original output strem:
-    FILE *original_os = fdopen(original_output_fd, "w");
-    if (original_os == NULL)
-    {
-        fprintf(stderr, "fdopen failed");
-        close_fds(fds, fds_size, EXIT_FAILURE);
-    }
-    // creating access to original input strem:
-    FILE *original_is = fdopen(original_input_fd, "r");
-    if (original_is == NULL)
-    {
-        fprintf(stderr, "fdopen failed");
-        close_fds(fds, fds_size, EXIT_FAILURE);
-    }
+    signal(SIGALRM, handle_alarm);  // setting the alarm signal
 
-    signal(SIGALRM, handle_alarm);
-
-    char buffer[BUFFER_SIZE];
-    int timeout_int = -1;
+    char buffer[BUFFER_SIZE];  // buffer to hold the messages
+    int timeout_int = -1;  // timeout in int
     if (timeout != NULL)
     {
         timeout_int = atoi(timeout);
     }
 
-    int flag = 0;
-    int isClient = 0;
-    int valid_timeout_input = ((input_mode != NULL) && ((strncmp(input_mode, "UDP", 3) == 0) || (strncmp(input_mode, "UDSSD", 5) == 0)));
-     int valid_timeout_output = ((output_mode != NULL) && ((strncmp(output_mode, "UDP", 3) == 0) || (strncmp(output_mode, "UDSCD", 5) == 0)));
+    int flag = 0;  // flag to check if it is the first iteration
+
+    int isClient = 0, isServer = 0;  // flags to check if it is a client or a server
     if ((input_mode != NULL && input_mode[3] == 'C') || (output_mode != NULL && output_mode[3] == 'C'))
         isClient = 1;
+    if((input_mode != NULL && input_mode[3] == 'S') || (output_mode != NULL && output_mode[3] == 'S'))
+        isServer = 1;
+
+    // checking if the timeout is valid for the input/output mode (only for datagram mode)
+    int valid_timeout_input = ((input_mode != NULL) && ((strncmp(input_mode, "UDP", 3) == 0) || (strncmp(input_mode, "UDSSD", 5) == 0)));
+    int valid_timeout_output = ((output_mode != NULL) && ((strncmp(output_mode, "UDP", 3) == 0) || (strncmp(output_mode, "UDSCD", 5) == 0)));
+
+    // main loop to communicate between the user and the server/client:
     while (1)
     {
-
         if (isClient || flag)
         { // if it is a client or not the first iteration, we need to receive a message, and not to wait for the user to enter a message.
             size_t bytes_recv = 0;
-            fflush(original_os);
+            fflush(stdout);
             // recveiving msg:
             memset(buffer, 0, BUFFER_SIZE);
             bytes_recv = generic_recv(input_fd, input_mode, output_mode, buffer, BUFFER_SIZE, timeout_int);
             if (input_mode != NULL && bytes_recv > 0)
-            {                                         // means there was a message
-                fprintf(original_os, "%s\n", buffer); // printing msg to the terminal
+            { // means there was a message
+                printf("%s\n", buffer); // printing msg to the terminal
             }
         }
 
         flag = 1;
         // communicate user from original i/o:
-        memset(buffer, 0, BUFFER_SIZE);
-        fprintf(original_os, "Enter message to send (or 'exit' to quit):\n");
-        if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
-        { // if it is datagram, we need to set a timeout
-            signal(SIGALRM, handle_alarm);
-            alarm(timeout_int);
+        if(input_mode != NULL || isServer)
+        {  // check if the user used stdin in the generic recv above.
+            memset(buffer, 0, BUFFER_SIZE);
+            printf("Enter message to send (or 'exit' to quit):\n");
+            if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
+            { // if it is datagram, we need to set a timeout
+                signal(SIGALRM, handle_alarm);
+                alarm(timeout_int);
+            }
+            fgets(buffer, BUFFER_SIZE, stdin); // taking input from client's keyboard
+            alarm(0);
         }
-        fgets(buffer, BUFFER_SIZE, original_is); // taking input from client's keyboard
-        alarm(0);
         buffer[strcspn(buffer, "\n")] = '\0'; // Remove newline character from buffer
         if (strcmp(buffer, "exit") == 0)
         { // Check if the user wants to exit

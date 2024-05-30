@@ -1,4 +1,4 @@
-FLAGS = -Wall -g
+FLAGS = -Wall -g fprofile-arcs -ftest-coverage
 
 .PHONY: all clean run cps
 
@@ -14,6 +14,10 @@ mync: mynetcat.c ttt
 #run:
 run_e: mync
 	./mync -e "ttt $(s)"
+
+run_c: mync
+	./mync -e "ttt 123456789"
+	./mync -e "ttt 123456789"
 
 # Cleaning:
 clean:
