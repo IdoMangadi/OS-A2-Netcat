@@ -7,22 +7,6 @@
 few notes:
 1. when running: UDPS with -i and UDPC with -o the client get twice input any time
 
-// handling the communication between the user and the server/client:
-    int original_input_fd = STDIN_FILENO, original_output_fd = STDOUT_FILENO;  // saving terminal input and keyboard output:
-    fds[fds_size++] = original_input_fd;
-    fds[fds_size++] = original_output_fd;
-
-    // creating access to original output strem:
-    FILE *original_os = fdopen(original_output_fd, "w");
-    if (original_os == NULL)
-    {
-        fprintf(stderr, "fdopen failed");
-        close_fds(fds, fds_size, EXIT_FAILURE);
-    }
-    // creating access to original input strem:
-    FILE *original_is = fdopen(original_input_fd, "r");
-    if (original_is == NULL)
-    {
-        fprintf(stderr, "fdopen failed");
-        close_fds(fds, fds_size, EXIT_FAILURE);
-    }
+ERRORS:
+1.  starting udp client without open server - put alarm aroud line 311 and also in start udp server in line 275 + udss_stream
+2. adding timers to listen of streams

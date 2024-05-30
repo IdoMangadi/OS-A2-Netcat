@@ -15,7 +15,7 @@
 #define TO_SEC 4  // timeout in seconds
 #define TO_MIC 0 // timeout in microseconds
 
-int fds[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};  // array to hold the fds 
+int fds[4] = {-1, -1, -1, -1};  // array to hold the fds 
 int fds_size = 0;  // size of the fds array
 char unix_path[100];  // path for the unix domain socket
 
@@ -26,8 +26,7 @@ void close_fds(int fds[], size_t size, int EXIT_CODE)
 {
     for (int i = 0; i < size; i++)
     {
-        if (fds[i] > -1)
-            close(fds[i]);
+        if (fds[i] > -1) close(fds[i]);
     }
     if (unix_path != NULL)
     {
@@ -432,18 +431,12 @@ void handle_o_args(char *output_mode, int *output_fd, int *tcp_server_out_fd)
 /**
  * generic recv function, handles the input from the user or from the input stream.
 */
-size_t generic_recv(int input_fd, char *input_mode, char *output_mode, char *buffer, size_t buffer_size, int timeout)
+size_t generic_recv(int input_fd, char *input_mode, char *buffer, size_t buffer_size)
 {
     size_t bytes_recv = 0;
     if (input_mode != NULL)
     {
-        if (timeout != -1 && ((strncmp(input_mode, "UDP", 3) == 0 ||  strncmp(input_mode, "UDSSD", 5) == 0) || ((input_mode!=NULL)&&(strncmp(output_mode, "UDP", 3) == 0 || strncmp(output_mode, "UDSSD", 5) == 0))))
-        {
-            signal(SIGALRM, handle_alarm);
-            alarm(timeout);
-        }
         bytes_recv = recv(input_fd, buffer, BUFFER_SIZE, 0);
-        alarm(0);
 
         if (bytes_recv <= 0)
         {
@@ -505,7 +498,6 @@ size_t generic_send(int output_fd, char *output_mode, char *buffer, size_t bytes
 */
 int main(int argc, char *argv[])
 {
-
     int opt;
     char *executable = NULL;  // the executable to run
     char *input_mode = NULL;  // the input mode
@@ -612,7 +604,6 @@ int main(int argc, char *argv[])
             {
                 fprintf(stderr, "dup2 failed");
                 close_fds(fds, fds_size, EXIT_FAILURE);
-
             } // duplicate input_fd to be in stdin
         }
         if (output_fd != -1)
@@ -622,7 +613,6 @@ int main(int argc, char *argv[])
             {
                 fprintf(stderr, "dup2 failed");
                 close_fds(fds, fds_size, EXIT_FAILURE);
-
             } // duplicate output_fd to be in stdout
         }
 
@@ -684,7 +674,14 @@ int main(int argc, char *argv[])
             fflush(stdout);
             // recveiving msg:
             memset(buffer, 0, BUFFER_SIZE);
-            bytes_recv = generic_recv(input_fd, input_mode, output_mode, buffer, BUFFER_SIZE, timeout_int);
+            if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
+            { // if it is datagram, we need to set a timeout
+                signal(SIGALRM, handle_alarm);
+                alarm(timeout_int);
+            }
+            bytes_recv = generic_recv(input_fd, input_mode, buffer, BUFFER_SIZE);
+            alarm(0);
+
             if (input_mode != NULL && bytes_recv > 0)
             { // means there was a message
                 printf("%s\n", buffer); // printing msg to the terminal
@@ -697,13 +694,7 @@ int main(int argc, char *argv[])
         {  // check if the user used stdin in the generic recv above.
             memset(buffer, 0, BUFFER_SIZE);
             printf("Enter message to send (or 'exit' to quit):\n");
-            if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
-            { // if it is datagram, we need to set a timeout
-                signal(SIGALRM, handle_alarm);
-                alarm(timeout_int);
-            }
             fgets(buffer, BUFFER_SIZE, stdin); // taking input from client's keyboard
-            alarm(0);
         }
         buffer[strcspn(buffer, "\n")] = '\0'; // Remove newline character from buffer
         if (strcmp(buffer, "exit") == 0)
@@ -712,7 +703,13 @@ int main(int argc, char *argv[])
         }
 
         // Send message:
+        // if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
+        // { // if it is datagram, we need to set a timeout
+        //     signal(SIGALRM, handle_alarm);
+        //     alarm(timeout_int);
+        // }
         generic_send(output_fd, output_mode, buffer, (size_t)strlen(buffer));
+        // alarm(0);
     }
 
     // closing fds:
