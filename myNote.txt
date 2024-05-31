@@ -1,12 +1,51 @@
-4. cover case of same port given as two arguments
-5. There are some global variables now, might want to change it, but it requries passing the variables to basicly every function
-6.To check unix domain socket options - segmentation fault fixed, seems that everyting works. 
-6.5 - Im leaving you to recheck stuff when running the gcov tests. I think it's done.
-7.make gcov
+commands to get 85.44% coverage:
 
-few notes:
-1. when running: UDPS with -i and UDPC with -o the client get twice input any time
+./mync
+./mync -a 
+./mync -e "aaa 123456789"
+./mync -e "ttt 123456789"
 
-ERRORS:
-1.  starting udp client without open server - put alarm aroud line 311 and also in start udp server in line 275 + udss_stream
-2. adding timers to listen of streams
+./mync -b TCPS4050 -e "ttt"
+
+./mync -b TCPS4050
+./mync -b TCPClocalhost,4050
+
+./mync -b TCPS4051 -e "ttt 123456789"
+./mync -b TCPClocalhost,4051
+
+./mync -i TCPS4052 -e "ttt 123456789"
+./mync -o TCPClocalhost,4052
+
+./mync -o TCPS4053 -e "ttt 123456789"
+./mync -i TCPClocalhost,4053
+
+./mync -b TCPS4054 -e "ttt 123456789" -t 10
+
+./mync -b TCPS4055 -i TCPS4056
+
+./mync -i UDPS4056 -t 3
+./mync -o UDPClocalhost,4056 -t 3
+
+./mync -o UDPS4057
+./mync -b UDPS4057
+./mync -b UDPClocalhost,4057
+
+./mync -e "ttt 123456789" -b UDSSDaa.txt
+./mync -b UDSCDaa.txt
+
+./mync -e "ttt 123456789" -i UDSSDaa.txt
+./mync -o UDSCDaa.txt
+
+./mync -b UDSSSaa.txt
+./mync -b UDSCSaa.txt
+
+./mync -i UDSSSaa.txt
+./mync -o UDSCSaa.txt
+
+./mync -o UDSSSaa.txt
+./mync -i UDSCSaa.txt
+
+./mync -o UDSCSaa.txt
+
+clean_all:
+	rm -f ttt mync *.o *.out *.gcov *.gcda *.gcno
