@@ -34,6 +34,8 @@ gcov_analysis:
 # Cleaning:
 clean:
 	rm -f ttt mync *.o *.out
+clean_all:
+	rm -f ttt mync *.o *.out *.gcov *.gcda *.gcno
 
 # git usage:
 cps:
