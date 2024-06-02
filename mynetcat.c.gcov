@@ -707,13 +707,13 @@
         -:  703:        }
         -:  704:
         -:  705:        // Send message:
-        -:  706:        // if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
-        -:  707:        // { // if it is datagram, we need to set a timeout
-        -:  708:        //     signal(SIGALRM, handle_alarm);
-        -:  709:        //     alarm(timeout_int);
-        -:  710:        // }
+      114:  706:        if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
+        -:  707:        { // if it is datagram, we need to set a timeout
+        1:  708:            signal(SIGALRM, handle_alarm);
+        1:  709:            alarm(timeout_int);
+        -:  710:        }
        97:  711:        generic_send(output_fd, output_mode, buffer, (size_t)strlen(buffer));
-        -:  712:        // alarm(0);
+        -:  712:        alarm(0);
         -:  713:    }
         -:  714:
         -:  715:    // closing fds:

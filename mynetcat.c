@@ -703,13 +703,13 @@ int main(int argc, char *argv[])
         }
 
         // Send message:
-        // if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
-        // { // if it is datagram, we need to set a timeout
-        //     signal(SIGALRM, handle_alarm);
-        //     alarm(timeout_int);
-        // }
+        if ((timeout_int != -1) && (valid_timeout_input || valid_timeout_output))
+        { // if it is datagram, we need to set a timeout
+            signal(SIGALRM, handle_alarm);
+            alarm(timeout_int);
+        }
         generic_send(output_fd, output_mode, buffer, (size_t)strlen(buffer));
-        // alarm(0);
+        alarm(0);
     }
 
     // closing fds:
